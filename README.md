@@ -28,14 +28,14 @@ dsh tui · newapi-messages/deepseek-v4.1-flash · /Users/you/project
 ## 安装
 
 ```bash
-git clone https://github.com/xingzoudefangye/dsh-tui.git
+git clone https://github.com/xingzoudefengye/dsh-tui.git
 cd dsh-tui
 node scripts/setup.mjs
 ```
 
 `setup.mjs` 会做三件幂等的事：
 
-1. `dsh plugin --profile tui add github:xingzoudefangye/dsh-tui` —— 建一个叫 `tui` 的 profile
+1. `dsh plugin --profile tui add github:xingzoudefengye/dsh-tui` —— 建一个叫 `tui` 的 profile
 2. 把该 profile 的 `dsh.profile.bundles` 设成 `["@deepseek-ai/dsh-base", "dsh-tui"]`
 3. 从 `web` profile 的补丁层里抄出 `agent-default-model` / `llm-deepseek` / `llm-pi-ai` 三条，写进 `tui` 的补丁层
 

@@ -19,7 +19,7 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-const DEFAULT_SPEC = "github:xingzoudefangye/dsh-tui";
+const DEFAULT_SPEC = "github:xingzoudefengye/dsh-tui";
 const PROFILE = "tui";
 const PROVIDER_IDS = new Set(["agent-default-model", "llm-deepseek", "llm-pi-ai"]);
 const MARKER = "# 由 scripts/setup.mjs 生成";
@@ -37,8 +37,27 @@ const home = process.env.DSH_HOME ?? join(homedir(), ".dsh");
 const profiles = join(home, "profiles");
 const profileDir = join(profiles, PROFILE);
 
+/** cmd.exe 的引号规则：只有含空白或特殊字符的参数才需要包一层双引号。 */
+function quoteForCmd(argument) {
+	if (!/[\s"^&|<>()]/.test(argument)) return argument;
+	return `"${argument.replace(/"/g, '""')}"`;
+}
+
+/**
+ * 跑一条外部命令，返回退出码。
+ *
+ * Windows 上 `dsh` 是 npm 生成的 `dsh.cmd` 垫片，spawnSync 不能直接执行它
+ * （失败时 status 为 null，看起来就像「命令跑过但失败了」），所以经 cmd.exe 转一手。
+ * spawn 本身失败时把原因打出来，否则用户只看到一句「没装上」，无从下手。
+ */
 function run(command, args) {
-	const result = spawnSync(command, args, { stdio: "inherit" });
+	const result = process.platform === "win32"
+		? spawnSync(process.env.ComSpec ?? "cmd.exe", ["/d", "/s", "/c", [command, ...args].map(quoteForCmd).join(" ")], { stdio: "inherit" })
+		: spawnSync(command, args, { stdio: "inherit" });
+	if (result.error !== void 0) {
+		process.stderr.write(`\n⚠ 启动 ${command} 失败：${result.error.message}\n`);
+		return 1;
+	}
 	return result.status ?? 1;
 }
 
