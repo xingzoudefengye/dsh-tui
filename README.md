@@ -55,7 +55,7 @@ node scripts/setup.mjs /Users/you/Projects/dsh-tui
 
 ```bash
 dsh tui                                 # 新开一段对话
-dsh tui --model deepseek-v4.1-flash     # 换本 provider 下的另一个模型
+dsh tui --model muse-spark-1.3-contributor   # 换同一个 provider 下的另一个模型
 dsh tui --no-reasoning                  # 不显示思考流
 dsh tui --session-id session-…          # 继续之前的会话
 ```
