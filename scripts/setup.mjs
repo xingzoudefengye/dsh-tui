@@ -39,10 +39,32 @@ const profileDir = join(profiles, PROFILE);
 
 function run(command, args) {
 	const result = spawnSync(command, args, { stdio: "inherit" });
-	if (result.status !== 0) {
-		process.stderr.write(`\n失败：${command} ${args.join(" ")}（退出码 ${result.status}）\n`);
-		process.exit(result.status ?? 1);
+	return result.status ?? 1;
+}
+
+/**
+ * 把 `github:owner/repo` 换成 GitHub 的归档 tarball 地址。
+ *
+ * 为什么要这条兜底：pnpm 解析 git 依赖时会先 `git ls-remote`，这一步在本机偶发
+ * 返回 "Repository not found"（仓库明明是公开的，同样的命令在 shell 里手动跑又正常），
+ * 一旦撞上，`dsh plugin add github:...` 直接失败。换成归档 tarball 就不经过 git，
+ * 只要 HTTP 能下就行。
+ */
+function archiveUrl(spec, branch = "main") {
+	const slug = spec.startsWith("github:") ? spec.slice("github:".length) : spec;
+	return `https://github.com/${slug}/archive/refs/heads/${branch}.tar.gz`;
+}
+
+/** 装插件：先按给定规格装，git 规格失败时退到归档 tarball。 */
+function addPlugin(spec) {
+	const attempts = [spec];
+	if (spec.startsWith("github:")) attempts.push(archiveUrl(spec));
+	for (const [index, attempt] of attempts.entries()) {
+		if (index > 0) process.stdout.write(`\n↻ git 规格安装失败，改用归档 tarball：${attempt}\n`);
+		if (run("dsh", ["plugin", "--profile", PROFILE, "add", attempt]) === 0) return;
 	}
+	process.stderr.write(`\n✗ 两种方式都没装上（${attempts.join(" / ")}）\n`);
+	process.exit(1);
 }
 
 /**
@@ -83,7 +105,7 @@ function splitEntries(text) {
 
 // 1. 建 profile 并装包
 mkdirSync(profileDir, { recursive: true });
-run("dsh", ["plugin", "--profile", PROFILE, "add", spec]);
+addPlugin(spec);
 
 // 2. 挂 bundle
 const manifestPath = join(profileDir, "package.json");
